@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JM Family Hub</title>
+    <link rel="stylesheet" href="styles.css">
+    <script defer src="script.js"></script> 
+</head>
+<body>
+     <nav>
+        <a href="./index.html" class="active">Home</a>
+        <a href="./photos.html">Family Photos</a>
+        <a href="./parties.html">Family Parties</a>
+		<a href="./experiences.html">Family Experiences</a>
+        <a href="./blog.html">Family Blog</a>
+    </nav>
+    <div class="container">
+        <h1>Welcome to the JM Family Hub</h1>
+        <p>Share your family photos, videos, and stories with loved ones!</p>
+        <section class="upload-section">
+            <h2>Upload a Photo or Video</h2>
+            <form id="upload-form">
+                <label for="file-input">Choose a file:</label>
+                <input type="file" id="file-input" accept="image/*,video/*" required>
+                <label for="description">Description:</label>
+                <textarea id="description" placeholder="Add a description (e.g., Grandma's 80th birthday)" required></textarea>
+                <button type="submit">Upload</button>
+            </form>
+        </section>
+    </div>
+</body>
+</html>
