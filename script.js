@@ -43,3 +43,44 @@ document.getElementById('upload-form')?.addEventListener('submit', async (e) => 
     fileInput.value = '';
     document.getElementById('description').value = '';
 });
+
+// Handle login
+document.getElementById('login-form')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const email = document.getElementById('email').value;
+    const password = document.getElementById('password').value;
+
+    const { error } = await supabaseClient.auth.signIn({ email, password });
+    if (error) {
+        alert('Login failed: ' + error.message);
+        return;
+    }
+    alert('Logged in!');
+    window.location.reload(); // Refresh to show upload form
+});
+
+// Handle signup (basic, extend as needed)
+document.getElementById('signup-link')?.addEventListener('click', async (e) => {
+    e.preventDefault();
+    const email = prompt('Enter email for signup:');
+    const password = prompt('Enter password:');
+    if (email && password) {
+        const { error } = await supabaseClient.auth.signUp({ email, password });
+        if (error) {
+            alert('Signup failed: ' + error.message);
+        } else {
+            alert('Signup successful! Check your email to confirm.');
+        }
+    }
+});
+
+// Check if user is logged in
+supabaseClient.auth.onAuthStateChange((event, session) => {
+    if (session) {
+        document.querySelector('.auth-section').style.display = 'none';
+        document.querySelector('.upload-section').style.display = 'block';
+    } else {
+        document.querySelector('.auth-section').style.display = 'block';
+        document.querySelector('.upload-section').style.display = 'none';
+    }
+});

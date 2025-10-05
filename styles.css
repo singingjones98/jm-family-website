@@ -72,3 +72,30 @@ h1, h2 {
 		margin: 10px 0;
 	}
 }
+
+.auth-section {
+    margin-top: 20px;
+    max-width: 400px;
+}
+
+.auth-section form {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.auth-section input, .auth-section button {
+    padding: 10px;
+    font-size: 1em;
+}
+
+.auth-section button {
+    background-color: #333;
+    color: white;
+    border: none;
+    cursor: pointer;
+}
+
+.auth-section button:hover {
+    background-color: #555;
+}
