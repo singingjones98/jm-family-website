@@ -4,6 +4,31 @@ const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYm
 const { createClient } = supabase;
 const supabaseClient = createClient(supabaseUrl, supabaseAnonKey);
 
+// Handle confirmation link on page load
+async function handleAuthRedirect() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const accessToken = urlParams.get('access_token');
+    const refreshToken = urlParams.get('refresh_token');
+    if (accessToken && refreshToken) {
+        const { error } = await supabaseClient.auth.setSession({
+            access_token: accessToken,
+            refresh_token: refreshToken
+        });
+        if (error) {
+            console.error('Error setting session:', error.message);
+            alert('Failed to confirm email: ' + error.message);
+        } else {
+            alert('Email confirmed and logged in!');
+            // Clear URL parameters to avoid re-processing
+            window.history.replaceState({}, document.title, window.location.pathname);
+            window.location.reload();
+        }
+    }
+}
+
+// Call on page load
+handleAuthRedirect();
+
 // Handle form submission
 document.getElementById('upload-form')?.addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -58,6 +83,8 @@ document.getElementById('login-form')?.addEventListener('submit', async (e) => {
         return;
     }
     alert('Logged in!');
+// Force session refresh to ensure UI updates
+    await supabaseClient.auth.getSession();   
     window.location.reload(); // Refresh to show upload form
 });
 
