@@ -1,6 +1,8 @@
 // Initialize Supabase client
+const supabaseUrl = 'https://khsyzbxzdwvfhooeniyf.supabase.co';
+const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imtoc3l6Ynh6ZHd2Zmhvb2VuaXlmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTk2MTg4NDksImV4cCI6MjA3NTE5NDg0OX0.H11VjNGhsMYna20WHNqHbn4GkDJu77VnNm5789hySTs';
 const { createClient } = supabase;
-const supabaseClient = createClient('https://khsyzbxzdwvfhooeniyf.supabase.co', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imtoc3l6Ynh6ZHd2Zmhvb2VuaXlmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTk2MTg4NDksImV4cCI6MjA3NTE5NDg0OX0.H11VjNGhsMYna20WHNqHbn4GkDJu77VnNm5789hySTs');
+const supabaseClient = createClient(supabaseUrl, supabaseAnonKey);
 
 // Handle form submission
 document.getElementById('upload-form')?.addEventListener('submit', async (e) => {
@@ -29,7 +31,7 @@ document.getElementById('upload-form')?.addEventListener('submit', async (e) => 
     const { error: dbError } = await supabaseClient
         .from('family_entries')
         .insert({
-            user_id: supabaseClient.auth.user()?.id,
+            user_id: supabaseClient.auth.getUser()?.data.user?.id,
             description,
             file_path: fileName
         });
@@ -50,7 +52,7 @@ document.getElementById('login-form')?.addEventListener('submit', async (e) => {
     const email = document.getElementById('email').value;
     const password = document.getElementById('password').value;
 
-    const { error } = await supabaseClient.auth.signIn({ email, password });
+    const { error } = await supabaseClient.auth.signInWithPassword({ email, password });
     if (error) {
         alert('Login failed: ' + error.message);
         return;
@@ -100,7 +102,7 @@ async function loadPhotos() {
     gallery.innerHTML = '';
     data.forEach(item => {
         const img = document.createElement('img');
-        img.src = `${supabaseClient.storage.from('family-media').getPublicUrl(item.file_path).publicURL}`;
+        img.src = supabaseClient.storage.from('family-media').getPublicUrl(item.file_path).data.publicURL;
         img.alt = item.description;
         img.style.width = '100%';
         gallery.appendChild(img);
