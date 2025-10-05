@@ -76,14 +76,28 @@ document.getElementById('signup-link')?.addEventListener('click', async (e) => {
     }
 });
 
+// Handle logout
+document.getElementById('logout-button')?.addEventListener('click', async () => {
+    const { error } = await supabaseClient.auth.signOut();
+    if (error) {
+        alert('Logout failed: ' + error.message);
+        return;
+    }
+    alert('Logged out!');
+    window.location.reload();
+});
+
 // Check if user is logged in
 supabaseClient.auth.onAuthStateChange((event, session) => {
+    const logoutButton = document.getElementById('logout-button');
     if (session) {
         document.querySelector('.auth-section').style.display = 'none';
         document.querySelector('.upload-section').style.display = 'block';
+        if (logoutButton) logoutButton.style.display = 'block';
     } else {
         document.querySelector('.auth-section').style.display = 'block';
         document.querySelector('.upload-section').style.display = 'none';
+        if (logoutButton) logoutButton.style.display = 'none';
     }
 });
 
@@ -99,14 +113,16 @@ async function loadPhotos() {
     }
 
     const gallery = document.getElementById('photo-gallery');
-    gallery.innerHTML = '';
-    data.forEach(item => {
-        const img = document.createElement('img');
-        img.src = supabaseClient.storage.from('family-media').getPublicUrl(item.file_path).data.publicURL;
-        img.alt = item.description;
-        img.style.width = '100%';
-        gallery.appendChild(img);
-    });
+if (gallery) {
+        gallery.innerHTML = '';
+        data.forEach(item => {
+            const img = document.createElement('img');
+            img.src = supabaseClient.storage.from('family-media').getPublicUrl(item.file_path).data.publicUrl;
+            img.alt = item.description;
+            img.style.width = '100%';
+            gallery.appendChild(img);
+        });
+    }
 }
 
 if (document.getElementById('photo-gallery')) {
