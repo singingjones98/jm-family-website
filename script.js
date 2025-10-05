@@ -84,3 +84,29 @@ supabaseClient.auth.onAuthStateChange((event, session) => {
         document.querySelector('.upload-section').style.display = 'none';
     }
 });
+
+// Load photos for gallery
+async function loadPhotos() {
+    const { data, error } = await supabaseClient
+        .from('family_entries')
+        .select('description, file_path');
+
+    if (error) {
+        console.error('Error loading photos:', error);
+        return;
+    }
+
+    const gallery = document.getElementById('photo-gallery');
+    gallery.innerHTML = '';
+    data.forEach(item => {
+        const img = document.createElement('img');
+        img.src = `${supabaseClient.storage.from('family-media').getPublicUrl(item.file_path).publicURL}`;
+        img.alt = item.description;
+        img.style.width = '100%';
+        gallery.appendChild(img);
+    });
+}
+
+if (document.getElementById('photo-gallery')) {
+    loadPhotos();
+}
