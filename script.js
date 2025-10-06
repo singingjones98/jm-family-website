@@ -32,11 +32,13 @@ handleAuthRedirect();
 // Handle form submission
 document.getElementById('upload-form')?.addEventListener('submit', async (e) => {
     e.preventDefault();
+    console.log('Upload form submitted');
     const fileInput = document.getElementById('file-input');
     const description = document.getElementById('description').value;
     const file = fileInput.files[0];
 
     if (!file || !description) {
+        console.log('Missing file or description');
         alert('Please select a file and add a description.');
         return;
     }
@@ -44,31 +46,38 @@ document.getElementById('upload-form')?.addEventListener('submit', async (e) => 
     // Get current user
     const { data: { user }, error: userError } = await supabaseClient.auth.getUser();
     if (userError || !user) {
+        console.log('User not logged in:', userError?.message);
         alert('You must be logged in to upload.');
         return;
     }
+    console.log('User ID:', user.id);
 
     // Upload file to Supabase storage
     const fileName = `${Date.now()}_${file.name}`;
+    console.log('Uploading file:', fileName);
     const { data, error } = await supabaseClient.storage
         .from('family-media')
         .upload(fileName, file);
 
     if (error) {
+        console.log('Storage upload error:', error.message);
         alert('Upload failed: ' + error.message);
         return;
     }
+    console.log('File uploaded:', data.path);
 
     // Save entry to database
+    console.log('Saving to family_entries:', { user_id: user.id, description, file_path: fileName })
     const { error: dbError } = await supabaseClient
         .from('family_entries')
         .insert({
-            user_id: supabaseClient.auth.getUser()?.data.user?.id,
+            user_id: user.id, // Fixed: Use user.id from earlier getUser()
             description,
             file_path: fileName
         });
 
     if (dbError) {
+        console.log('Database insert error:', dbError.message);
         alert('Failed to save entry: ' + dbError.message);
         return;
     }
@@ -81,30 +90,47 @@ document.getElementById('upload-form')?.addEventListener('submit', async (e) => 
 // Handle login
 document.getElementById('login-form')?.addEventListener('submit', async (e) => {
     e.preventDefault();
+    console.log('Login form submitted');
     const email = document.getElementById('email').value;
     const password = document.getElementById('password').value;
 
     const { error } = await supabaseClient.auth.signInWithPassword({ email, password });
     if (error) {
+        console.log('Login error:', error.message);
         alert('Login failed: ' + error.message);
         return;
     }
-    alert('Logged in!');
-// Force session refresh to ensure UI updates
-    await supabaseClient.auth.getSession();   
-    window.location.reload(); // Refresh to show upload form
+const { data: { session } } = await supabaseClient.auth.getSession();
+    if (session) {
+        console.log('Session active:', session.user.id);
+        document.querySelector('.auth-section').style.display = 'none';
+        document.querySelector('.upload-section').style.display = 'block';
+        document.getElementById('logout-button').style.display = 'block';
+        alert('Logged in!');
+    } else {
+        console.log('No session after login');
+        alert('Session not found after login. Please try again.');
+    }
 });
+
+// Force session refresh to ensure UI updates
+//    await supabaseClient.auth.getSession();   
+//    window.location.reload(); // Refresh to show upload form
+//});
 
 // Handle signup (basic, extend as needed)
 document.getElementById('signup-link')?.addEventListener('click', async (e) => {
     e.preventDefault();
+    console.log('Signup link clicked');
     const email = prompt('Enter email for signup:');
     const password = prompt('Enter password:');
     if (email && password) {
         const { error } = await supabaseClient.auth.signUp({ email, password });
         if (error) {
+            console.log('Signup error:', error.message);
             alert('Signup failed: ' + error.message);
         } else {
+            console.log('Signup successful, email sent');
             alert('Signup successful! Check your email to confirm.');
         }
     }
@@ -112,8 +138,10 @@ document.getElementById('signup-link')?.addEventListener('click', async (e) => {
 
 // Handle logout
 document.getElementById('logout-button')?.addEventListener('click', async () => {
+    console.log('Logout button clicked');
     const { error } = await supabaseClient.auth.signOut();
     if (error) {
+        console.log('Logout error:', error.message);
         alert('Logout failed: ' + error.message);
         return;
     }
