@@ -3,6 +3,10 @@ const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYm
 const { createClient } = supabase;
 const supabaseClient = createClient(supabaseUrl, supabaseAnonKey);
 
+// Supabase free tier limits
+const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50 MB in bytes
+const MAX_TOTAL_STORAGE = 1 * 1024 * 1024 * 1024; // 1 GB in bytes
+
 // Function to compress images
 async function compressImage(file, maxDimension = 800, quality = 0.8) {
     // Skip compression for non-image files (e.g., videos)
@@ -98,6 +102,13 @@ document.getElementById('upload-form')?.addEventListener('submit', async (e) => 
         return;
     }
 
+    // Check per-file size limit (50 MB)
+    if (file.size > MAX_FILE_SIZE) {
+        console.log('File size exceeds limit:', file.size);
+        alert('File size exceeds 50 MB limit.');
+        return;
+    }
+
     const { data: { user }, error: userError } = await supabaseClient.auth.getUser();
     if (userError || !user) {
         console.log('User not logged in:', userError?.message);
@@ -118,6 +129,22 @@ document.getElementById('upload-form')?.addEventListener('submit', async (e) => 
         return;
     }
 
+    // Check total storage limit (1 GB)
+    const { data: entries, error: entriesError } = await supabaseClient
+        .from('family_entries')
+        .select('file_size');
+    if (entriesError) {
+        console.error('Error checking storage usage:', entriesError.message);
+        alert('Failed to check storage usage: ' + entriesError.message);
+        return;
+    }
+    const totalUsedStorage = entries.reduce((sum, entry) => sum + (entry.file_size || 0), 0);
+    if (totalUsedStorage + uploadFile.size > MAX_TOTAL_STORAGE) {
+        console.log('Total storage limit exceeded:', totalUsedStorage + uploadFile.size);
+        alert('Upload would exceed 1 GB storage limit. Please delete some files or upload a smaller file.');
+        return;
+    }
+
     // Upload file to Supabase storage
     const fileName = `${Date.now()}_${uploadFile.name}`;
     console.log('Uploading file to family-media:', fileName);
@@ -132,15 +159,16 @@ document.getElementById('upload-form')?.addEventListener('submit', async (e) => 
     }
     console.log('File uploaded:', data.path);
 
-    // Save entry to database
-    console.log('Saving to family_entries:', { user_id: user.id, description, file_path: fileName });
+    // Save entry to database with file size
+    console.log('Saving to family_entries:', { user_id: user.id, description, file_path: fileName, file_size: uploadFile.size });
     try {
         const { error: dbError } = await supabaseClient
             .from('family_entries')
             .insert({
                 user_id: user.id,
                 description,
-                file_path: fileName
+                file_path: fileName,
+                file_size: uploadFile.size
             });
 
         if (dbError) {
