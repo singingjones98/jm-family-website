@@ -1,4 +1,3 @@
-// Initialize Supabase client
 const supabaseUrl = 'https://khsyzbxzdwvfhooeniyf.supabase.co';
 const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imtoc3l6Ynh6ZHd2Zmhvb2VuaXlmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTk2MTg4NDksImV4cCI6MjA3NTE5NDg0OX0.H11VjNGhsMYna20WHNqHbn4GkDJu77VnNm5789hySTs';
 const { createClient } = supabase;
@@ -19,14 +18,12 @@ async function handleAuthRedirect() {
             alert('Failed to confirm email: ' + error.message);
         } else {
             alert('Email confirmed and logged in!');
-            // Clear URL parameters to avoid re-processing
             window.history.replaceState({}, document.title, window.location.pathname);
             window.location.reload();
         }
     }
 }
 
-// Call on page load
 handleAuthRedirect();
 
 // Handle form submission
@@ -43,7 +40,6 @@ document.getElementById('upload-form')?.addEventListener('submit', async (e) => 
         return;
     }
 
-    // Get current user
     const { data: { user }, error: userError } = await supabaseClient.auth.getUser();
     if (userError || !user) {
         console.log('User not logged in:', userError?.message);
@@ -54,7 +50,7 @@ document.getElementById('upload-form')?.addEventListener('submit', async (e) => 
 
     // Upload file to Supabase storage
     const fileName = `${Date.now()}_${file.name}`;
-    console.log('Uploading file:', fileName);
+    console.log('Uploading file to family-media:', fileName);
     const { data, error } = await supabaseClient.storage
         .from('family-media')
         .upload(fileName, file);
@@ -67,21 +63,28 @@ document.getElementById('upload-form')?.addEventListener('submit', async (e) => 
     console.log('File uploaded:', data.path);
 
     // Save entry to database
-    console.log('Saving to family_entries:', { user_id: user.id, description, file_path: fileName })
-    const { error: dbError } = await supabaseClient
-        .from('family_entries')
-        .insert({
-            user_id: user.id, // Fixed: Use user.id from earlier getUser()
-            description,
-            file_path: fileName
-        });
+    console.log('Saving to family_entries:', { user_id: user.id, description, file_path: fileName });
+    try {
+        const { error: dbError } = await supabaseClient
+            .from('family_entries')
+            .insert({
+                user_id: user.id,
+                description,
+                file_path: fileName
+            });
 
-    if (dbError) {
-        console.log('Database insert error:', dbError.message);
-        alert('Failed to save entry: ' + dbError.message);
+        if (dbError) {
+            console.log('Database insert error:', dbError.message);
+            alert('Failed to save entry: ' + dbError.message);
+            return;
+        }
+    } catch (err) {
+        console.log('Unexpected error during insert:', err.message);
+        alert('Unexpected error during upload: ' + err.message);
         return;
     }
 
+    console.log('Upload successful');
     alert('Upload successful!');
     fileInput.value = '';
     document.getElementById('description').value = '';
@@ -100,7 +103,8 @@ document.getElementById('login-form')?.addEventListener('submit', async (e) => {
         alert('Login failed: ' + error.message);
         return;
     }
-const { data: { session } } = await supabaseClient.auth.getSession();
+
+    const { data: { session } } = await supabaseClient.auth.getSession();
     if (session) {
         console.log('Session active:', session.user.id);
         document.querySelector('.auth-section').style.display = 'none';
@@ -113,12 +117,7 @@ const { data: { session } } = await supabaseClient.auth.getSession();
     }
 });
 
-// Force session refresh to ensure UI updates
-//    await supabaseClient.auth.getSession();   
-//    window.location.reload(); // Refresh to show upload form
-//});
-
-// Handle signup (basic, extend as needed)
+// Handle signup
 document.getElementById('signup-link')?.addEventListener('click', async (e) => {
     e.preventDefault();
     console.log('Signup link clicked');
@@ -151,7 +150,7 @@ document.getElementById('logout-button')?.addEventListener('click', async () => 
 
 // Check if user is logged in
 supabaseClient.auth.onAuthStateChange((event, session) => {
-    console.log('Auth state changed:', event, session); // Debug log
+    console.log('Auth state changed:', event, session);
     const logoutButton = document.getElementById('logout-button');
     if (session) {
         document.querySelector('.auth-section').style.display = 'none';
@@ -166,25 +165,34 @@ supabaseClient.auth.onAuthStateChange((event, session) => {
 
 // Load photos for gallery
 async function loadPhotos() {
+    console.log('Loading photos from family_entries');
     const { data, error } = await supabaseClient
         .from('family_entries')
         .select('description, file_path');
 
     if (error) {
         console.error('Error loading photos:', error);
+        alert('Failed to load photos: ' + error.message);
         return;
     }
+    console.log('Photos loaded:', data);
 
     const gallery = document.getElementById('photo-gallery');
     if (gallery) {
         gallery.innerHTML = '';
-        data.forEach(item => {
-            const img = document.createElement('img');
-            img.src = supabaseClient.storage.from('family-media').getPublicUrl(item.file_path).data.publicUrl;
-            img.alt = item.description;
-            img.style.width = '100%';
-            gallery.appendChild(img);
-        });
+        if (data.length === 0) {
+            console.log('No photos found in family_entries');
+            gallery.innerHTML = '<p>No photos available.</p>';
+        } else {
+            data.forEach(item => {
+                console.log('Adding photo to gallery:', item.file_path);
+                const img = document.createElement('img');
+                img.src = supabaseClient.storage.from('family-media').getPublicUrl(item.file_path).data.publicUrl;
+                img.alt = item.description;
+                img.style.width = '100%';
+                gallery.appendChild(img);
+            });
+        }
     }
 }
 
