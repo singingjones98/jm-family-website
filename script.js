@@ -3,6 +3,64 @@ const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYm
 const { createClient } = supabase;
 const supabaseClient = createClient(supabaseUrl, supabaseAnonKey);
 
+// Function to compress images
+async function compressImage(file, maxDimension = 800, quality = 0.8) {
+    // Skip compression for non-image files (e.g., videos)
+    if (!file.type.startsWith('image/')) {
+        return file;
+    }
+
+    return new Promise((resolve, reject) => {
+        const img = new Image();
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+
+        img.onload = () => {
+            let width = img.width;
+            let height = img.height;
+
+            // Calculate new dimensions while preserving aspect ratio
+            if (width > height) {
+                if (width > maxDimension) {
+                    height = Math.round((height * maxDimension) / width);
+                    width = maxDimension;
+                }
+            } else {
+                if (height > maxDimension) {
+                    width = Math.round((width * maxDimension) / height);
+                    height = maxDimension;
+                }
+            }
+
+            // Set canvas dimensions
+            canvas.width = width;
+            canvas.height = height;
+
+            // Draw and compress image
+            ctx.drawImage(img, 0, 0, width, height);
+            canvas.toBlob(
+                (blob) => {
+                    if (!blob) {
+                        reject(new Error('Failed to compress image'));
+                        return;
+                    }
+                    // Create a new File object with the compressed blob
+                    const compressedFile = new File([blob], file.name, {
+                        type: 'image/jpeg',
+                        lastModified: Date.now()
+                    });
+                    resolve(compressedFile);
+                },
+                'image/jpeg',
+                quality
+            );
+        };
+
+        img.onerror = () => reject(new Error('Failed to load image'));
+        img.src = URL.createObjectURL(file);
+    });
+}
+
 // Handle confirmation link on page load
 async function handleAuthRedirect() {
     const urlParams = new URLSearchParams(window.location.search);
@@ -48,12 +106,24 @@ document.getElementById('upload-form')?.addEventListener('submit', async (e) => 
     }
     console.log('User ID:', user.id);
 
+    // Compress image if it's an image file
+    let uploadFile = file;
+    try {
+        console.log('Compressing file:', file.name);
+        uploadFile = await compressImage(file, 800, 0.8);
+        console.log('File compressed:', uploadFile.name, uploadFile.size);
+    } catch (err) {
+        console.error('Compression error:', err.message);
+        alert('Failed to compress image: ' + err.message);
+        return;
+    }
+
     // Upload file to Supabase storage
-    const fileName = `${Date.now()}_${file.name}`;
+    const fileName = `${Date.now()}_${uploadFile.name}`;
     console.log('Uploading file to family-media:', fileName);
     const { data, error } = await supabaseClient.storage
         .from('family-media')
-        .upload(fileName, file);
+        .upload(fileName, uploadFile);
 
     if (error) {
         console.log('Storage upload error:', error.message);
