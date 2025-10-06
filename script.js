@@ -165,6 +165,13 @@ supabaseClient.auth.onAuthStateChange((event, session) => {
 
 // Load photos for gallery
 async function loadPhotos() {
+    //Move gallery check inside function to prevent null errors
+    const gallery = document.getElementById('photo-gallery');
+    if (!gallery) {
+        console.log('No photo-gallery element found on this page');
+        return;
+    }
+
     console.log('Loading photos from family_entries');
     const { data, error } = await supabaseClient
         .from('family_entries')
@@ -177,25 +184,23 @@ async function loadPhotos() {
     }
     console.log('Photos loaded:', data);
 
-    const gallery = document.getElementById('photo-gallery');
-    if (gallery) {
-        gallery.innerHTML = '';
-        if (data.length === 0) {
-            console.log('No photos found in family_entries');
-            gallery.innerHTML = '<p>No photos available.</p>';
-        } else {
-            data.forEach(item => {
-                console.log('Adding photo to gallery:', item.file_path);
-                const img = document.createElement('img');
-                img.src = supabaseClient.storage.from('family-media').getPublicUrl(item.file_path).data.publicUrl;
-                img.alt = item.description;
-                img.style.width = '100%';
-                gallery.appendChild(img);
-            });
-        }
+    gallery.innerHTML = '';
+    if (data.length === 0) {
+        console.log('No photos found in family_entries');
+        gallery.innerHTML = '<p>No photos available.</p>';
+    } else {
+        data.forEach(item => {
+            console.log('Adding photo to gallery:', item.file_path);
+            const img = document.createElement('img');
+            img.src = supabaseClient.storage.from('family-media').getPublicUrl(item.file_path).data.publicUrl;
+            img.alt = item.description;
+            img.style.width = '100%';
+            gallery.appendChild(img);
+        });
     }
 }
 
+//Only call loadPhotos on pages with photo-gallery
 if (document.getElementById('photo-gallery')) {
     loadPhotos();
 }
