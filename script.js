@@ -165,10 +165,16 @@ supabaseClient.auth.onAuthStateChange((event, session) => {
 
 // Load photos for gallery
 async function loadPhotos() {
-    //Move gallery check inside function to prevent null errors
+    //Check current page to ensure loadPhotos only runs on photos.html
+    if (!window.location.pathname.includes('photos.html')) {
+        console.log('Skipping loadPhotos: Not on photos.html');
+        return;
+    }
+
+    //Ensure gallery exists before proceeding
     const gallery = document.getElementById('photo-gallery');
     if (!gallery) {
-        console.log('No photo-gallery element found on this page');
+        console.log('No photo-gallery element found');
         return;
     }
 
@@ -200,7 +206,10 @@ async function loadPhotos() {
     }
 }
 
-//Only call loadPhotos on pages with photo-gallery
-if (document.getElementById('photo-gallery')) {
-    loadPhotos();
-}
+//Only call loadPhotos on photos.html after DOM is loaded
+document.addEventListener('DOMContentLoaded', () => {
+    if (window.location.pathname.includes('photos.html') && document.getElementById('photo-gallery')) {
+        console.log('Initializing loadPhotos on photos.html');
+        loadPhotos();
+    }
+});
