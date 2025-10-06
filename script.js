@@ -152,26 +152,31 @@ document.getElementById('logout-button')?.addEventListener('click', async () => 
 supabaseClient.auth.onAuthStateChange((event, session) => {
     console.log('Auth state changed:', event, session);
     const logoutButton = document.getElementById('logout-button');
-    if (session) {
-        document.querySelector('.auth-section').style.display = 'none';
-        document.querySelector('.upload-section').style.display = 'block';
-        if (logoutButton) logoutButton.style.display = 'block';
-    } else {
-        document.querySelector('.auth-section').style.display = 'block';
-        document.querySelector('.upload-section').style.display = 'none';
-        if (logoutButton) logoutButton.style.display = 'none';
+    
+    // Only run auth-related UI updates on index.html
+    if (window.location.pathname.includes('index.html') || window.location.pathname === '/') {
+        const authSection = document.querySelector('.auth-section');
+        const uploadSection = document.querySelector('.upload-section');
+        
+        if (session) {
+            if (authSection) authSection.style.display = 'none';
+            if (uploadSection) uploadSection.style.display = 'block';
+            if (logoutButton) logoutButton.style.display = 'block';
+        } else {
+            if (authSection) authSection.style.display = 'block';
+            if (uploadSection) uploadSection.style.display = 'none';
+            if (logoutButton) logoutButton.style.display = 'none';
+        }
     }
 });
 
 // Load photos for gallery
 async function loadPhotos() {
-    //Check current page to ensure loadPhotos only runs on photos.html
     if (!window.location.pathname.includes('photos.html')) {
         console.log('Skipping loadPhotos: Not on photos.html');
         return;
     }
 
-    //Ensure gallery exists before proceeding
     const gallery = document.getElementById('photo-gallery');
     if (!gallery) {
         console.log('No photo-gallery element found');
@@ -195,18 +200,35 @@ async function loadPhotos() {
         console.log('No photos found in family_entries');
         gallery.innerHTML = '<p>No photos available.</p>';
     } else {
-        data.forEach(item => {
-            console.log('Adding photo to gallery:', item.file_path);
-            const img = document.createElement('img');
-            img.src = supabaseClient.storage.from('family-media').getPublicUrl(item.file_path).data.publicUrl;
-            img.alt = item.description;
-            img.style.width = '100%';
-            gallery.appendChild(img);
-        });
+        for (const item of data) {
+            console.log('Adding media to gallery:', item.file_path);
+            const fileExtension = item.file_path.split('.').pop().toLowerCase();
+            const isVideo = ['mp4', 'mov', 'webm'].includes(fileExtension);
+            const { data: signedData, error: signedError } = await supabaseClient.storage
+                .from('family-media')
+                .createSignedUrl(item.file_path, 60);
+            if (signedError) {
+                console.error('Error generating signed URL:', signedError.message);
+                continue;
+            }
+            const mediaElement = isVideo ? document.createElement('video') : document.createElement('img');
+            mediaElement.src = signedData.signedUrl;
+            mediaElement.alt = item.description;
+            mediaElement.style.width = '100%';
+            if (isVideo) {
+                mediaElement.controls = true;
+                mediaElement.style.height = '200px';
+                mediaElement.style.objectFit = 'cover';
+            }
+            mediaElement.onerror = () => {
+                console.error(`Failed to load media: ${mediaElement.src}`);
+            };
+            gallery.appendChild(mediaElement);
+        }
     }
 }
 
-//Only call loadPhotos on photos.html after DOM is loaded
+// Only call loadPhotos on photos.html after DOM is loaded
 document.addEventListener('DOMContentLoaded', () => {
     if (window.location.pathname.includes('photos.html') && document.getElementById('photo-gallery')) {
         console.log('Initializing loadPhotos on photos.html');
