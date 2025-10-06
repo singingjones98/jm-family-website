@@ -41,6 +41,13 @@ document.getElementById('upload-form')?.addEventListener('submit', async (e) => 
         return;
     }
 
+    // Get current user
+    const { data: { user }, error: userError } = await supabaseClient.auth.getUser();
+    if (userError || !user) {
+        alert('You must be logged in to upload.');
+        return;
+    }
+
     // Upload file to Supabase storage
     const fileName = `${Date.now()}_${file.name}`;
     const { data, error } = await supabaseClient.storage
@@ -116,6 +123,7 @@ document.getElementById('logout-button')?.addEventListener('click', async () => 
 
 // Check if user is logged in
 supabaseClient.auth.onAuthStateChange((event, session) => {
+    console.log('Auth state changed:', event, session); // Debug log
     const logoutButton = document.getElementById('logout-button');
     if (session) {
         document.querySelector('.auth-section').style.display = 'none';
@@ -140,7 +148,7 @@ async function loadPhotos() {
     }
 
     const gallery = document.getElementById('photo-gallery');
-if (gallery) {
+    if (gallery) {
         gallery.innerHTML = '';
         data.forEach(item => {
             const img = document.createElement('img');
